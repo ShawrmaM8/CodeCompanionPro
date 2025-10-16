@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
@@ -15,30 +15,37 @@ import {
 import { codeAnalysisService } from "./services/code-analysis.js";
 import { gamificationService } from "./services/gamification.js";
 import { mascotService } from "./services/mascot.js";
+import { authenticateUser, optionalAuth, getCurrentUserId, type AuthenticatedRequest } from "./middleware/auth.js";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Mock user for development (replace with proper auth)
-  const MOCK_USER_ID = "550e8400-e29b-41d4-a716-446655440000"; // Fixed UUID for development
-  const getCurrentUserId = () => MOCK_USER_ID;
+  // Helper function to get current user ID from request
+  const getUserIdFromRequest = (req: AuthenticatedRequest): string => {
+    const userId = getCurrentUserId(req);
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+    return userId;
+  };
 
-  // Initialize default user and data
-  app.post("/api/init", async (req, res) => {
+  // Initialize user and data (requires authentication)
+  app.post("/api/init", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getUserIdFromRequest(req);
+      const user = req.user;
       
       // Check if user exists, create if not
-      let user = await storage.getUser(userId);
-      if (!user) {
-        user = await storage.createUser({
-          firstName: "John",
-          lastName: "Developer",
-          email: "john@example.com",
-          subscriptionTier: "pro",
-          totalPoints: 2847,
-          currentStreak: 12,
-          longestStreak: 25
+      let dbUser = await storage.getUser(userId);
+      if (!dbUser) {
+        dbUser = await storage.createUser({
+          firstName: user?.firstName || "User",
+          lastName: user?.lastName || "Developer",
+          email: user?.emailAddresses?.[0]?.emailAddress || "user@example.com",
+          subscriptionTier: "free", // Start with free tier
+          totalPoints: 0,
+          currentStreak: 0,
+          longestStreak: 0
         });
 
         // Create sample achievements and projects
@@ -46,7 +53,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await createSampleProjects(userId);
       }
 
-      res.json({ user });
+      res.json({ user: dbUser });
     } catch (error) {
       console.error("Error initializing user:", error);
       res.status(500).json({ message: "Failed to initialize user" });
@@ -54,9 +61,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User routes
-  app.get("/api/user", async (req, res) => {
+  app.get("/api/user", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getUserIdFromRequest(req);
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -68,9 +75,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/user/subscription", async (req, res) => {
+  app.put("/api/user/subscription", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getUserIdFromRequest(req);
       const { tier } = req.body;
       
       if (!['free', 'pro', 'premium'].includes(tier)) {
@@ -86,9 +93,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Project routes
-  app.get("/api/projects", async (req, res) => {
+  app.get("/api/projects", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getUserIdFromRequest(req);
       const projects = await storage.getUserProjects(userId);
       res.json(projects);
     } catch (error) {
@@ -97,9 +104,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/projects", async (req, res) => {
+  app.post("/api/projects", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getUserIdFromRequest(req);
       const projectData = insertProjectSchema.parse({ ...req.body, userId });
       
       // Check project limit based on subscription
@@ -135,7 +142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/projects/:id", async (req, res) => {
+  app.get("/api/projects/:id", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const project = await storage.getProject(req.params.id);
       if (!project) {
@@ -148,7 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/projects/:id", async (req, res) => {
+  app.put("/api/projects/:id", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const projectData = req.body;
       const project = await storage.updateProject(req.params.id, projectData);
@@ -160,7 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Milestone routes
-  app.get("/api/projects/:id/milestones", async (req, res) => {
+  app.get("/api/projects/:id/milestones", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const milestones = await storage.getProjectMilestones(req.params.id);
       res.json(milestones);
@@ -170,7 +177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/projects/:id/milestones", async (req, res) => {
+  app.post("/api/projects/:id/milestones", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const milestoneData = insertMilestoneSchema.parse({
         ...req.body,
@@ -185,9 +192,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/milestones/:id/complete", async (req, res) => {
+  app.put("/api/milestones/:id/complete", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getUserIdFromRequest(req);
       const pointsReward = 100;
       
       const milestone = await storage.completeMilestone(req.params.id, pointsReward);
@@ -213,9 +220,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Code Analysis routes
-  app.post("/api/code-analysis", async (req, res) => {
+  app.post("/api/code-analysis", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getUserIdFromRequest(req);
       const { projectId, code, fileName } = req.body;
 
       if (!code) {
@@ -262,9 +269,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/code-analysis/history", async (req, res) => {
+  app.get("/api/code-analysis/history", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getUserIdFromRequest(req);
       const limit = parseInt(req.query.limit as string) || 10;
       const history = await storage.getUserAnalysisHistory(userId, limit);
       res.json(history);
@@ -275,7 +282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Achievement routes
-  app.get("/api/achievements", async (req, res) => {
+  app.get("/api/achievements", async (req: Request, res: Response) => {
     try {
       const achievements = await storage.getAllAchievements();
       res.json(achievements);
@@ -285,9 +292,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/user/achievements", async (req, res) => {
+  app.get("/api/user/achievements", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getUserIdFromRequest(req);
       const userAchievements = await storage.getUserAchievements(userId);
       res.json(userAchievements);
     } catch (error) {
@@ -297,9 +304,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Mascot routes
-  app.post("/api/mascot/chat", async (req, res) => {
+  app.post("/api/mascot/chat", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getUserIdFromRequest(req);
       const { message, context } = req.body;
 
       const response = await mascotService.generateResponse(message, context, userId);
@@ -319,9 +326,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/mascot/suggestion", async (req, res) => {
+  app.get("/api/mascot/suggestion", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getUserIdFromRequest(req);
       const suggestion = await mascotService.generateSuggestion(userId);
       res.json(suggestion);
     } catch (error) {
@@ -332,9 +339,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Enhanced Gamification routes
   // Mini challenges for Free tier
-  app.get("/api/gamification/challenge", async (req, res) => {
+  app.get("/api/gamification/challenge", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getUserIdFromRequest(req);
       const challenge = await gamificationService.generateMiniChallenge(userId);
       res.json(challenge);
     } catch (error) {
@@ -344,9 +351,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Mentor hints for Pro tier
-  app.get("/api/gamification/mentor-hint", async (req, res) => {
+  app.get("/api/gamification/mentor-hint", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getUserIdFromRequest(req);
       const context = req.query.context ? JSON.parse(req.query.context as string) : undefined;
       const hint = await gamificationService.generateMentorHint(userId, context);
       res.json({ hint });
@@ -357,9 +364,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Deep dive explanations for Premium tier
-  app.get("/api/gamification/deep-dive/:topic", async (req, res) => {
+  app.get("/api/gamification/deep-dive/:topic", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getUserIdFromRequest(req);
       const { topic } = req.params;
       const explanation = await gamificationService.generateDeepDiveExplanation(userId, topic);
       res.json(explanation);
@@ -370,9 +377,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Award points for tier-specific activities
-  app.post("/api/gamification/award-points", async (req, res) => {
+  app.post("/api/gamification/award-points", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getUserIdFromRequest(req);
       const { action, metadata } = req.body;
       
       // Get user tier for points calculation
@@ -390,9 +397,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Activity routes
-  app.get("/api/activity", async (req, res) => {
+  app.get("/api/activity", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getUserIdFromRequest(req);
       const limit = parseInt(req.query.limit as string) || 20;
       const activities = await storage.getUserActivity(userId, limit);
       res.json(activities);
@@ -403,9 +410,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Points routes
-  app.get("/api/points/history", async (req, res) => {
+  app.get("/api/points/history", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getUserIdFromRequest(req);
       const limit = parseInt(req.query.limit as string) || 20;
       const history = await storage.getUserPointsHistory(userId, limit);
       res.json(history);
@@ -416,9 +423,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard stats
-  app.get("/api/dashboard/stats", async (req, res) => {
+  app.get("/api/dashboard/stats", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getUserIdFromRequest(req);
       const user = await storage.getUser(userId);
       const projects = await storage.getUserProjects(userId);
       const recentAnalysis = await storage.getUserAnalysisHistory(userId, 1);
@@ -442,6 +449,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
       res.status(500).json({ message: "Failed to fetch dashboard stats" });
+    }
+  });
+
+  // Health check and monitoring routes
+  app.get("/api/health", (req: Request, res: Response) => {
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      environment: process.env.NODE_ENV || 'development'
+    });
+  });
+
+  app.get("/api/health/detailed", async (req: Request, res: Response) => {
+    try {
+      // Check database connection
+      const dbHealth = await storage.getUser('health-check') ? 'connected' : 'disconnected';
+      
+      // Check HuggingFace API (if configured)
+      const hfHealth = process.env.HUGGINGFACE_API_KEY ? 'configured' : 'not-configured';
+      
+      // Check Clerk (if configured)
+      const clerkHealth = process.env.CLERK_SECRET_KEY ? 'configured' : 'not-configured';
+
+      res.json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        services: {
+          database: dbHealth,
+          huggingface: hfHealth,
+          clerk: clerkHealth
+        },
+        limits: {
+          freeTier: {
+            projects: 5,
+            codeAnalysesPerDay: 10,
+            mascotChatsPerDay: 50,
+            fileSizeMB: 1,
+            codeSizeKB: 10
+          }
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Usage statistics endpoint
+  app.get("/api/usage", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = getUserIdFromRequest(req);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Get user's current usage
+      const projects = await storage.getUserProjects(userId);
+      const recentAnalysis = await storage.getUserAnalysisHistory(userId, 30);
+      const recentActivity = await storage.getUserActivity(userId, 30);
+
+      const usage = {
+        userId,
+        subscriptionTier: user.subscriptionTier,
+        currentPeriod: {
+          start: new Date().toISOString().split('T')[0],
+          end: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        },
+        limits: {
+          free: {
+            projects: 5,
+            codeAnalysesPerDay: 10,
+            mascotChatsPerDay: 50
+          },
+          pro: {
+            projects: 15,
+            codeAnalysesPerDay: 50,
+            mascotChatsPerDay: 200
+          },
+          premium: {
+            projects: -1, // unlimited
+            codeAnalysesPerDay: -1, // unlimited
+            mascotChatsPerDay: -1 // unlimited
+          }
+        },
+        usage: {
+          projects: projects.length,
+          codeAnalyses: recentAnalysis.length,
+          mascotChats: recentActivity.filter(a => a.activityType === 'mascot_chat').length
+        },
+        remaining: {
+          projects: user.subscriptionTier === 'free' ? Math.max(0, 5 - projects.length) : -1,
+          codeAnalyses: user.subscriptionTier === 'free' ? Math.max(0, 10 - recentAnalysis.length) : -1,
+          mascotChats: user.subscriptionTier === 'free' ? Math.max(0, 50 - recentActivity.filter(a => a.activityType === 'mascot_chat').length) : -1
+        }
+      };
+
+      res.json(usage);
+    } catch (error) {
+      console.error('Error fetching usage stats:', error);
+      res.status(500).json({ message: 'Failed to fetch usage statistics' });
     }
   });
 

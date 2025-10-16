@@ -1,4 +1,5 @@
 import { CodeAnalysisEngine } from "../../client/src/lib/code-analysis-engine";
+import { huggingFaceService, type CodeAnalysisRequest, type CodeAnalysisResponse } from "./huggingface";
 
 export interface AnalysisResult {
   overallScore: number;
@@ -15,6 +16,12 @@ export interface AnalysisResult {
   }>;
   strengths: string[];
   improvements: string[];
+  // Enhanced fields from HuggingFace
+  aiSummary?: string;
+  skillTags?: string[];
+  complexity?: 'beginner' | 'intermediate' | 'advanced';
+  confidence?: number;
+  suggestions?: string[];
 }
 
 class CodeAnalysisService {
@@ -22,11 +29,42 @@ class CodeAnalysisService {
 
   async analyzeCode(code: string, fileName?: string): Promise<AnalysisResult> {
     try {
-      // Use the client-side analysis engine
+      // Use the client-side analysis engine for static analysis
       const result = this.engine.analyzeCode(code, fileName);
       
       // Add server-side enhancements
       await this.enhanceAnalysis(result, code, fileName);
+      
+      // Add HuggingFace AI analysis if API key is available
+      if (process.env.HUGGINGFACE_API_KEY) {
+        try {
+          const language = this.detectLanguage(code, fileName);
+          const aiAnalysis = await huggingFaceService.analyzeCode({
+            code,
+            language,
+            fileName
+          });
+          
+          // Merge AI analysis with static analysis
+          result.aiSummary = aiAnalysis.summary;
+          result.skillTags = aiAnalysis.skillTags;
+          result.complexity = aiAnalysis.complexity;
+          result.confidence = aiAnalysis.confidence;
+          result.suggestions = aiAnalysis.suggestions;
+          
+          // Enhance existing arrays with AI insights
+          result.strengths = [...new Set([...result.strengths, ...aiAnalysis.strengths])];
+          result.improvements = [...new Set([...result.improvements, ...aiAnalysis.improvements])];
+          
+          // Adjust overall score based on AI confidence
+          if (aiAnalysis.confidence > 0.7) {
+            result.overallScore = Math.min(100, result.overallScore + 5);
+          }
+        } catch (aiError) {
+          console.warn('HuggingFace AI analysis failed, using static analysis only:', aiError);
+          // Continue with static analysis only
+        }
+      }
       
       return result;
     } catch (error) {

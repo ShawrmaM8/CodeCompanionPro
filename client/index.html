@@ -1,14 +1,383 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Fira+Code:wght@300..700&family=Geist+Mono:wght@100..900&family=Geist:wght@100..900&family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400..700;1,400..700&family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Outfit:wght@100..900&family=Oxanium:wght@200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Roboto:ital,wght@0,100..900;1,100..900&family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Code Tutor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/d3@7"></script>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <h1 class="text-xl font-bold text-gray-900">🤖 AI Code Tutor</h1>
+                    </div>
+                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                        <button onclick="showPage('dashboard')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium">Dashboard</button>
+                        <button onclick="showPage('skill-tree')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium">Skill Tree</button>
+                        <button onclick="showPage('code-analysis')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium">Code Analysis</button>
+                        <button onclick="showPage('mascot')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium">AI Mascot</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- Dashboard Page -->
+        <div id="dashboard" class="page">
+            <div class="space-y-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+                    <p class="mt-1 text-sm text-gray-500">Welcome to your AI Code Tutor</p>
+                </div>
+                
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                    <div class="bg-white overflow-hidden shadow rounded-lg">
+                        <div class="p-5">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
+                                        <span class="text-white text-sm font-medium">📊</span>
+                                    </div>
+                                </div>
+                                <div class="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt class="text-sm font-medium text-gray-500 truncate">Total Points</dt>
+                                        <dd class="text-lg font-medium text-gray-900">1,250</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white overflow-hidden shadow rounded-lg">
+                        <div class="p-5">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
+                                        <span class="text-white text-sm font-medium">🔥</span>
+                                    </div>
+                                </div>
+                                <div class="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt class="text-sm font-medium text-gray-500 truncate">Current Streak</dt>
+                                        <dd class="text-lg font-medium text-gray-900">7 days</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white overflow-hidden shadow rounded-lg">
+                        <div class="p-5">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-purple-500 rounded-md flex items-center justify-center">
+                                        <span class="text-white text-sm font-medium">🎯</span>
+                                    </div>
+                                </div>
+                                <div class="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt class="text-sm font-medium text-gray-500 truncate">Skills Learned</dt>
+                                        <dd class="text-lg font-medium text-gray-900">12</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skill Tree Page -->
+        <div id="skill-tree" class="page hidden">
+            <div class="space-y-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Skill Tree</h1>
+                    <p class="mt-1 text-sm text-gray-500">Track your learning progress</p>
+                </div>
+
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <div id="skill-tree-container" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            <!-- Skills will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Code Analysis Page -->
+        <div id="code-analysis" class="page hidden">
+            <div class="space-y-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Code Analysis</h1>
+                    <p class="mt-1 text-sm text-gray-500">Get AI-powered feedback on your code</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white shadow rounded-lg">
+                        <div class="px-4 py-5 sm:p-6">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Upload Your Code</h3>
+                            <textarea
+                                id="code-input"
+                                placeholder="Paste your code here..."
+                                class="w-full h-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            ></textarea>
+                            <div class="mt-4">
+                                <button
+                                    onclick="analyzeCode()"
+                                    class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                >
+                                    Analyze Code
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white shadow rounded-lg">
+                        <div class="px-4 py-5 sm:p-6">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Analysis Results</h3>
+                            <div id="analysis-results" class="text-center py-8">
+                                <div class="text-gray-400 text-sm">
+                                    Upload code to see AI analysis results
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mascot Page -->
+        <div id="mascot" class="page hidden">
+            <div class="space-y-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">AI Mascot</h1>
+                    <p class="mt-1 text-sm text-gray-500">Chat with your AI coding companion</p>
+                </div>
+
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <div id="chat-messages" class="h-96 overflow-y-auto border border-gray-200 rounded-lg p-4 mb-4">
+                            <div class="flex justify-start">
+                                <div class="bg-gray-100 text-gray-900 max-w-xs lg:max-w-md px-4 py-2 rounded-lg">
+                                    <p class="text-sm">Hi! I'm your AI coding companion! 🤖 How can I help you learn today?</p>
+                                    <p class="text-xs opacity-70 mt-1" id="initial-time"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex space-x-2">
+                            <input
+                                type="text"
+                                id="chat-input"
+                                placeholder="Ask me anything about coding..."
+                                class="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                onkeypress="handleChatKeyPress(event)"
+                            />
+                            <button
+                                onclick="sendMessage()"
+                                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                                Send
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Simple navigation
+        function showPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.add('hidden');
+            });
+            
+            // Show selected page
+            document.getElementById(pageId).classList.remove('hidden');
+            
+            // Update nav buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-100', 'text-blue-700');
+                btn.classList.add('text-gray-500', 'hover:text-gray-700');
+            });
+            event.target.classList.add('bg-blue-100', 'text-blue-700');
+            event.target.classList.remove('text-gray-500', 'hover:text-gray-700');
+            
+            // Load page-specific data
+            if (pageId === 'skill-tree') {
+                loadSkills();
+            }
+        }
+
+        // Load skills
+        async function loadSkills() {
+            try {
+                const response = await fetch('/api/skills');
+                const skills = await response.json();
+                
+                const container = document.getElementById('skill-tree-container');
+                container.innerHTML = skills.map(skill => `
+                    <div class="relative rounded-lg border p-4 ${skill.completed ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-sm font-medium text-gray-900">${skill.name}</h3>
+                                <p class="text-xs text-gray-500">Level ${skill.level}</p>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${skill.completed ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                                    ${skill.completed ? 'Completed' : 'In Progress'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="h-2 rounded-full ${skill.completed ? 'bg-green-500' : 'bg-blue-500'}" style="width: ${skill.completed ? '100%' : '60%'}"></div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Failed to load skills:', error);
+            }
+        }
+
+        // Analyze code
+        async function analyzeCode() {
+            const code = document.getElementById('code-input').value;
+            if (!code.trim()) return;
+
+            const resultsDiv = document.getElementById('analysis-results');
+            resultsDiv.innerHTML = '<div class="text-center py-8"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div><div class="text-sm text-gray-500 mt-2">Analyzing...</div></div>';
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                });
+                const analysis = await response.json();
+                
+                resultsDiv.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm font-medium text-gray-700">Overall Score</span>
+                                <span class="text-sm font-bold text-blue-600">${analysis.overallScore}%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-500 h-2 rounded-full" style="width: ${analysis.overallScore}%"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700 mb-2">Strengths</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                ${analysis.strengths.map(strength => `<li class="flex items-center"><span class="text-green-500 mr-2">✓</span>${strength}</li>`).join('')}
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700 mb-2">Improvements</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                ${analysis.improvements.map(improvement => `<li class="flex items-center"><span class="text-yellow-500 mr-2">⚠</span>${improvement}</li>`).join('')}
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700 mb-2">Suggestions</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                ${analysis.suggestions.map(suggestion => `<li class="flex items-center"><span class="text-blue-500 mr-2">💡</span>${suggestion}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = '<div class="text-center py-8"><div class="text-red-500 text-sm">Analysis failed. Please try again.</div></div>';
+            }
+        }
+
+        // Chat functionality
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            const messagesDiv = document.getElementById('chat-messages');
+            
+            // Add user message
+            messagesDiv.innerHTML += `
+                <div class="flex justify-end">
+                    <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg bg-blue-500 text-white">
+                        <p class="text-sm">${message}</p>
+                        <p class="text-xs opacity-70 mt-1">${new Date().toLocaleTimeString()}</p>
+                    </div>
+                </div>
+            `;
+            
+            input.value = '';
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            // Add loading indicator
+            messagesDiv.innerHTML += `
+                <div class="flex justify-start">
+                    <div class="bg-gray-100 text-gray-900 max-w-xs lg:max-w-md px-4 py-2 rounded-lg">
+                        <div class="flex items-center space-x-2">
+                            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                            <span class="text-sm">AI is thinking...</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/mascot/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+                const data = await response.json();
+                
+                // Remove loading indicator
+                messagesDiv.innerHTML = messagesDiv.innerHTML.replace(/<div class="flex justify-start">[\s\S]*?AI is thinking\.\.\.<\/span><\/div><\/div><\/div>$/, '');
+                
+                // Add AI response
+                messagesDiv.innerHTML += `
+                    <div class="flex justify-start">
+                        <div class="bg-gray-100 text-gray-900 max-w-xs lg:max-w-md px-4 py-2 rounded-lg">
+                            <p class="text-sm">${data.response}</p>
+                            <p class="text-xs opacity-70 mt-1">${new Date().toLocaleTimeString()}</p>
+                        </div>
+                    </div>
+                `;
+                
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            } catch (error) {
+                console.error('Chat failed:', error);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('initial-time').textContent = new Date().toLocaleTimeString();
+            showPage('dashboard');
+        });
+    </script>
+</body>
 </html>

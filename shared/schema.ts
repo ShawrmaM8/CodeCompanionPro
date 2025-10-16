@@ -19,25 +19,25 @@ export const subscriptionTierEnum = pgEnum('subscription_tier', ['free', 'pro', 
 export const projectStatusEnum = pgEnum('project_status', ['active', 'completed', 'paused', 'archived']);
 export const achievementTypeEnum = pgEnum('achievement_type', ['code_quality', 'streak', 'milestone', 'project_completion', 'learning']);
 
-// Users table
+// Users table - optimized for free tier
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique(),
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  profileImageUrl: varchar("profile_image_url"),
+  email: varchar("email", { length: 255 }).unique(),
+  firstName: varchar("first_name", { length: 100 }),
+  lastName: varchar("last_name", { length: 100 }),
+  profileImageUrl: varchar("profile_image_url", { length: 500 }),
   subscriptionTier: subscriptionTierEnum("subscription_tier").default('free'),
   totalPoints: integer("total_points").default(0),
   currentStreak: integer("current_streak").default(0),
   longestStreak: integer("longest_streak").default(0),
   lastActiveAt: timestamp("last_active_at").defaultNow(),
+  // Compressed preferences to save space
   preferences: jsonb("preferences").$type<{
     mascotPersonality?: string;
     codeAnalysisSettings?: any;
     notificationSettings?: any;
   }>().default({}),
-  stripeCustomerId: varchar("stripe_customer_id"),
-  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  // Removed Stripe fields for free tier
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -73,12 +73,13 @@ export const milestones = pgTable("milestones", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Code Analysis table
+// Code Analysis table - optimized for free tier
 export const codeAnalysis = pgTable("code_analysis", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: uuid("project_id").references(() => projects.id).notNull(),
   userId: uuid("user_id").references(() => users.id).notNull(),
   fileName: varchar("file_name", { length: 255 }),
+  // Compressed analysis results to save space
   analysisResults: jsonb("analysis_results").$type<{
     overallScore: number;
     bestPractices: number;
@@ -94,6 +95,12 @@ export const codeAnalysis = pgTable("code_analysis", {
     }>;
     strengths: string[];
     improvements: string[];
+    // Enhanced fields from HuggingFace
+    aiSummary?: string;
+    skillTags?: string[];
+    complexity?: 'beginner' | 'intermediate' | 'advanced';
+    confidence?: number;
+    suggestions?: string[];
   }>().notNull(),
   pointsAwarded: integer("points_awarded").default(0),
   createdAt: timestamp("created_at").defaultNow(),

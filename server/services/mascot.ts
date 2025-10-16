@@ -1,5 +1,6 @@
 import { storage } from "../storage";
 import { MascotPersonality, mascotPersonality } from "../../client/src/lib/mascot-personality";
+import { huggingFaceService, type ChatRequest, type ChatResponse } from "./huggingface";
 
 interface MascotContext {
   userId: string;
@@ -29,7 +30,26 @@ class MascotService {
       // Get user context for personalized responses
       const mascotContext = await this.buildUserContext(userId, context);
       
-      // Generate tier-specific response
+      // Try HuggingFace AI first if API key is available
+      if (process.env.HUGGINGFACE_API_KEY) {
+        try {
+          const aiResponse = await huggingFaceService.generateChatResponse({
+            message,
+            context: {
+              recentCode: mascotContext.recentAnalysis?.[0]?.analysisResults?.code || undefined,
+              userLevel: this.determineUserLevel(mascotContext),
+              currentProject: mascotContext.recentProjects?.[0]?.name || undefined
+            }
+          });
+          
+          // Enhance AI response with mascot personality
+          return this.enhanceWithPersonality(aiResponse.response, mascotContext);
+        } catch (aiError) {
+          console.warn('HuggingFace AI response failed, falling back to static responses:', aiError);
+        }
+      }
+      
+      // Fallback to tier-specific static responses
       const response = await this.generateTierSpecificResponse(message, mascotContext);
       
       return response;
@@ -162,10 +182,31 @@ class MascotService {
     try {
       const mascotContext = await this.buildUserContext(userId);
       
-      // Analyze user's current state and progress
-      const suggestionType = await this.determineSuggestionType(mascotContext);
+      // Try HuggingFace AI for enhanced suggestions if API key is available
+      if (process.env.HUGGINGFACE_API_KEY) {
+        try {
+          const aiResponse = await huggingFaceService.generateLearningRecommendations({
+            skills: mascotContext.recentAnalysis?.map(a => a.analysisResults?.skillTags || []).flat() || [],
+            level: this.determineUserLevel(mascotContext),
+            interests: ['programming', 'web development', 'software engineering']
+          });
+          
+          return {
+            message: `Hey! I've been thinking about your learning journey! 🤔`,
+            suggestion: aiResponse.recommendations[0] || "Let's work on something new together!",
+            context: { 
+              type: 'ai_enhanced_suggestion',
+              resources: aiResponse.resources,
+              challenges: aiResponse.challenges
+            }
+          };
+        } catch (aiError) {
+          console.warn('HuggingFace AI suggestions failed, falling back to static suggestions:', aiError);
+        }
+      }
       
-      // Generate contextual suggestion
+      // Fallback to static suggestion logic
+      const suggestionType = await this.determineSuggestionType(mascotContext);
       const suggestion = await this.createContextualSuggestion(suggestionType, mascotContext);
       
       return suggestion;
@@ -509,6 +550,45 @@ class MascotService {
     ];
 
     return responses[Math.floor(Math.random() * responses.length)];
+  }
+
+  // Helper methods for HuggingFace integration
+  private determineUserLevel(context: MascotContext): string {
+    const avgCodeQuality = context.userStats?.avgCodeQuality || 0;
+    const totalPoints = context.userStats?.totalPoints || 0;
+    
+    if (avgCodeQuality > 85 && totalPoints > 2000) {
+      return 'advanced';
+    } else if (avgCodeQuality > 70 && totalPoints > 500) {
+      return 'intermediate';
+    } else {
+      return 'beginner';
+    }
+  }
+
+  private enhanceWithPersonality(aiResponse: string, context: MascotContext): string {
+    const userStats = context.userStats;
+    let enhancedResponse = aiResponse;
+    
+    // Add mascot personality touches
+    if (userStats?.currentStreak && userStats.currentStreak > 5) {
+      enhancedResponse += ` 🔥 By the way, that ${userStats.currentStreak}-day streak is amazing!`;
+    }
+    
+    if (userStats?.totalPoints && userStats.totalPoints > 1000) {
+      enhancedResponse += ` ⭐ You've earned ${userStats.totalPoints} points - you're really dedicated!`;
+    }
+    
+    // Add emoji based on response tone
+    if (enhancedResponse.includes('great') || enhancedResponse.includes('excellent')) {
+      enhancedResponse = `🌟 ${enhancedResponse}`;
+    } else if (enhancedResponse.includes('help') || enhancedResponse.includes('assist')) {
+      enhancedResponse = `🤝 ${enhancedResponse}`;
+    } else {
+      enhancedResponse = `💡 ${enhancedResponse}`;
+    }
+    
+    return enhancedResponse;
   }
 }
 
