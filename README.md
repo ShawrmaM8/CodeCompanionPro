@@ -44,9 +44,33 @@ Visit `http://localhost:5000`
 
 ## 🚀 Deployment
 
-1. Push to GitHub
-2. Connect to Vercel
-3. Deploy automatically
+### Option 1: Vercel (Recommended)
+1. **Push to GitHub**: Your code is already pushed
+2. **Connect to Vercel**: 
+   - Go to [vercel.com](https://vercel.com)
+   - Import your GitHub repository
+   - Vercel will auto-detect the configuration
+3. **Add Environment Variables** (Optional):
+   - `HUGGINGFACE_API_KEY`: Your HuggingFace API key for AI features
+4. **Deploy**: Automatic deployment on every push
+
+### Option 2: Manual Deployment
+```bash
+# Clone repository
+git clone https://github.com/ShawrmaM8/CodeCompanionPro
+cd CodeCompanionPro
+
+# Install dependencies
+npm install
+
+# Start server
+npm run dev
+```
+
+### Option 3: Other Platforms
+- **Netlify**: Works with static files
+- **Railway**: Supports Node.js apps
+- **Render**: Free tier available
 
 ## 📊 API Endpoints
 
