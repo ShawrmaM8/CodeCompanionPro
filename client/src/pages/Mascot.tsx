@@ -27,12 +27,23 @@ const Mascot: React.FC = () => {
     setLoading(true);
 
     try {
-      // Simulate AI response
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const response = await fetch('/api/mascot/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
       
       const aiResponse = {
         id: Date.now() + 1,
-        text: "That's a great question! Let me help you understand that concept better. Would you like me to explain it step by step? 🚀",
+        text: data.response || "I apologize, but I encountered an error. Please try again.",
         isUser: false,
         timestamp: new Date()
       };
@@ -40,6 +51,15 @@ const Mascot: React.FC = () => {
       setMessages(prev => [...prev, aiResponse]);
     } catch (error) {
       console.error('Failed to get AI response:', error);
+      
+      const errorResponse = {
+        id: Date.now() + 1,
+        text: "Sorry, I'm having trouble connecting right now. Please check your internet connection and try again.",
+        isUser: false,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, errorResponse]);
     } finally {
       setLoading(false);
     }
